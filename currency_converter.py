@@ -1,7 +1,8 @@
 import argparse as ap
 import requests
 import json
-import pprint # for testing purposes
+from currency_symbols import get_currency_name
+import pprint       # for testing purposes
 
 def add_parameters_needed(args_parser: ap.ArgumentParser):
 	"""
@@ -35,7 +36,15 @@ if __name__ == "__main__":
 		print("Argument --amount should be numeric (use . as decimal sign)")
 		exit(2)
 	iCurrency = args["input_currency"]
+	try:
+		iCurrency = get_currency_name(iCurrency)
+	except ValueError as valE:
+		print(valE)
+		exit(2)
+	except BaseException as e:
 		print(e)
+		exit(-1)
+
 	oCurrency = args["output_currency"]
 
 	# Get rates from exchangeratesapi.io
