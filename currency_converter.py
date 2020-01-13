@@ -35,6 +35,7 @@ if __name__ == "__main__":
 		print("Argument --amount should be numeric (use . as decimal sign)")
 		exit(2)
 	iCurrency = args["input_currency"]
+		print(e)
 	oCurrency = args["output_currency"]
 
 	# Get rates from exchangeratesapi.io
@@ -51,9 +52,37 @@ if __name__ == "__main__":
 
 	currencyRates = json.loads(curGet.text)["rates"]
 
-	if (oCurrency is not None) & (oCurrency not in currencyRates.keys()):
-		print(f"Unsupported output currency: {oCurrency}")
-		exit(2)
+	if oCurrency is not None:
+		try:
+			oCurrency = get_currency_name(oCurrency)
+		except ValueError as e:
+			print(e)
+			exit(2)
+		except BaseException as e:
+			print(f"Unexpected error during finding currency name:\n{e}")
+			exit(-1)
 
+		if oCurrency not in currencyRates.keys():
+			print(f"Unsupported output currency: {oCurrency}")
+			exit(2)
 
+	resJsonDict = {
+		"input": {
+			"amount": amount.__str__(),
+			"currency": iCurrency
+		},
+		"output": {
+			#  <3 letter currency code>: <float>
+		}
+	}
 
+	# Fill resJsonDict with one or multiple exchange rates
+	if oCurrency is None:
+		for oCur in currencyRates.keys():
+			resJsonDict["output"][oCur] = "%.2f" % (amount * float(currencyRates[oCur]))
+	else:
+		resJsonDict["output"][oCurrency] = "%.2f" % (amount * float(currencyRates[oCurrency]))
+
+	resJsonString = json.dumps(resJsonDict, indent=4)
+
+	print(resJsonString)
