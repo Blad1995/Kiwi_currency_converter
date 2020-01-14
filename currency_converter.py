@@ -17,7 +17,19 @@ def add_parameters_needed(args_parser: ap.ArgumentParser):
 
 
 class CurrencyConverter:
+	"""
+	CurrencyConverter handles converting on currency to another or to all available.
+	Exchange rates are obtained refreshed daily.
+	"""
 	def __init__(self, amount_to_convert: float = 0, input_currency: str = None, output_currency: str = None):
+		"""
+		:param amount: amount which we want to convert - float
+		:param input_currency: input currency - 3 letters name or currency symbol
+		:param output_currency: requested/output currency - 3 letters name or currency symbol
+					--> if output_currency param is missing, convert to all known currencies
+
+		Initialize CurrencyConverter class. Set self.exchangeRates and self.resultDict to None and convert amount_to_convert to float if necessary
+		"""
 		self.amount = float(amount_to_convert)
 		self.iCurrency = input_currency
 		self.exchangeRates = None
@@ -25,9 +37,19 @@ class CurrencyConverter:
 		self.resultDict = None
 
 	def verify_input_currency_name(self):
+		"""
+		Verify the validity of the self.iCurrency. Check if it is present in known currencies.
+		"""
 		self.iCurrency = get_currency_name(self.iCurrency)
 
 	def get_exchange_rates(self):
+		"""
+		Uses exchangeratesapi.io API to obtain current exchange rate and
+		sets variable self.exchangeRates to a dictionary with exchange rates
+		:raise ValueError: if input currency is not supported
+		:raise ConnectionError: if unable to connect to API
+		:raise BaseException: if unexpected error happens
+		"""
 		self.verify_input_currency_name()
 		# Get rates from exchangeratesapi.io
 		currency_get = requests.get(f"https://api.exchangeratesapi.io/latest?base={self.iCurrency}")
@@ -42,6 +64,11 @@ class CurrencyConverter:
 		self.exchangeRates = json.loads(currency_get.text)["rates"]
 	
 	def verify_output_currency_name(self):
+		"""
+			Check the validity of self.oCurrency in the database of available currencies and symbols.
+			Sets self.oCurrency to official 3 letters name of currency.
+			:raise ValueError: if output currency is not available
+		"""
 		if self.oCurrency is not None:
 			self.oCurrency = get_currency_name(self.oCurrency)
 			# Check if program have exchange rate for output currency
@@ -49,6 +76,10 @@ class CurrencyConverter:
 				raise ValueError(f"Unsupported output currency: {self.oCurrency}")
 
 	def set_result_JSON_string(self):
+		"""
+			Compute the result of the amount * exchange rate of output currency or all available currencies.
+			Sets variable self.resultDict to the dictionary in output format (viz README)
+		"""
 		try:
 			self.verify_output_currency_name()
 		except ValueError as e:
@@ -67,7 +98,7 @@ class CurrencyConverter:
 				#  <3 letter currency code>: <float>
 			}
 		}
-		# Fill resJsonDict with one or multiple exchange rates
+		# Fill self.resultDict with one or multiple exchange rates
 		if self.oCurrency is None:
 			for oCur in self.exchangeRates.keys():
 				self.resultDict["output"][oCur] = "%.2f" % (self.amount * float(self.exchangeRates[oCur]))
@@ -76,6 +107,7 @@ class CurrencyConverter:
 
 
 if __name__ == "__main__":
+	# Parser for parsing input arguments
 	argsParser = ap.ArgumentParser()
 	try:
 		argsParser = add_parameters_needed(argsParser)

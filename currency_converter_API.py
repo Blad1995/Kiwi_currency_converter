@@ -2,12 +2,18 @@ from flask import Flask, jsonify, abort
 from flask_restful import Api, reqparse
 from currency_converter import CurrencyConverter
 
+# Initialize FLASK API
 app = Flask(__name__)
 api = Api(app)
 
 
 @app.route("/currency_converter", methods=["GET"])
 def get_conversion():
+	"""
+	Default GET function to use CurrencyConverter via API.
+	:return: JSON file and status code of the GET request response
+	"""
+	# Query parser
 	arg_parser = reqparse.RequestParser()
 	arg_parser.add_argument("amount", required=True, help="Amount of currency to convert")
 	arg_parser.add_argument("input_currency", required=True, help="Currency of the amount on input")
@@ -33,10 +39,12 @@ def get_conversion():
 	except BaseException as e:
 		return e
 	if converter.resultDict is None:
+		# If error occurred during converting currencies.
 		error_message = f"""Unable to get the result for following arguments:\n
 						amount: {converter.amount}, input_currency: {converter.iCurrency}, output_currency: {converter.oCurrency}	
 					"""
 		abort(400, description=error_message)
+
 	return jsonify(converter.resultDict), 200
 
 
