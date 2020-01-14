@@ -20,17 +20,19 @@ def get_conversion():
 	arg_parser.add_argument("output_currency", required=False, help="Currency of desired output")
 	args = arg_parser.parse_args()
 
+	if args["input_currency"] == "" or args["amount"] == "":
+		abort(400, description="Invalid arguments amount or input_currency")
+
 	converter = CurrencyConverter(args["amount"], args["input_currency"], args["output_currency"])
 	try:
 		converter.get_exchange_rates()
 	except ValueError as valE:
-		return valE
+		abort(400, description=str(valE))
 	except ConnectionError as ce:
-		print("Problem with connection to database")
-		print(ce)
-		exit(-1)
+		error_message = f"Problem with connection to database\n{ce}"
+		abort(400, description=error_message)
 	except BaseException as e:
-		return e
+		abort(400, description=repr(e))
 
 	try:
 		converter.set_result_JSON_string()

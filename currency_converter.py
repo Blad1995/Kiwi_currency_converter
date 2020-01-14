@@ -58,7 +58,7 @@ class CurrencyConverter:
 			raise ConnectionError("Unable to retrieve exchange rates from server.")
 		elif currency_get.status_code == 400:
 			# Usually base currency not supported
-			raise ValueError(currency_get.text)
+			raise ValueError(str(currency_get.text))
 		elif currency_get.status_code != 200:
 			raise BaseException(f"Unexpected error during obtaining exchange rates\nCode: {currency_get.status_code} - {currency_get.text}")
 		self.exchangeRates = json.loads(currency_get.text)["rates"]
