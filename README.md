@@ -14,7 +14,7 @@ Program contains CLI and API application for converting currencies.
     - If missing all available currencies are considered as output_currencies
 ## Output
 JSON file in following format.
-```Python
+```
 {
     "input": { 
         "amount": <float>,
