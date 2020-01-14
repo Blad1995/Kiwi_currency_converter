@@ -18,11 +18,11 @@ def add_parameters_needed(args_parser: ap.ArgumentParser):
 
 class CurrencyConverter:
 	def __init__(self, amount_to_convert: float = 0, input_currency: str = None, output_currency: str = None):
-		self.amount = amount_to_convert
+		self.amount = float(amount_to_convert)
 		self.iCurrency = input_currency
 		self.exchangeRates = None
 		self.oCurrency = output_currency
-		self.resultJSON = None
+		self.resultDict = None
 
 	def verify_input_currency_name(self):
 		self.iCurrency = get_currency_name(self.iCurrency)
@@ -58,7 +58,7 @@ class CurrencyConverter:
 			print(f"Unexpected error during finding currency name:\n{e}")
 			return None
 
-		res_json_dict = {
+		self.resultDict = {
 			"input": {
 				"amount": str(self.amount),
 				"currency": self.iCurrency
@@ -70,10 +70,9 @@ class CurrencyConverter:
 		# Fill resJsonDict with one or multiple exchange rates
 		if self.oCurrency is None:
 			for oCur in self.exchangeRates.keys():
-				res_json_dict["output"][oCur] = "%.2f" % (self.amount * float(self.exchangeRates[oCur]))
+				self.resultDict["output"][oCur] = "%.2f" % (self.amount * float(self.exchangeRates[oCur]))
 		else:
-			res_json_dict["output"][self.oCurrency] = "%.2f" % (self.amount * float(self.exchangeRates[self.oCurrency]))
-		self.resultJSON = json.dumps(res_json_dict, indent=4)
+			self.resultDict["output"][self.oCurrency] = "%.2f" % (self.amount * float(self.exchangeRates[self.oCurrency]))
 
 
 if __name__ == "__main__":
@@ -121,7 +120,7 @@ if __name__ == "__main__":
 		print(e)
 		exit(-1)
 
-	resJsonString = converter.resultJSON
+	resJsonString = json.dumps(converter.resultDict, indent=4)
 	if resJsonString:
 		print(resJsonString)
 	else:
