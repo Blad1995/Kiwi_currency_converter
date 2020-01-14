@@ -2,7 +2,7 @@ import argparse as ap
 import requests
 import json
 from currency_symbols import get_currency_name
-import pprint       # for testing purposes
+
 
 def add_parameters_needed(args_parser: ap.ArgumentParser):
 	"""
@@ -16,6 +16,66 @@ def add_parameters_needed(args_parser: ap.ArgumentParser):
 	return args_parser
 
 
+class CurrencyConverter:
+	def __init__(self, amount_to_convert: float = 0, input_currency: str = None, output_currency: str = None):
+		self.amount = amount_to_convert
+		self.iCurrency = input_currency
+		self.exchangeRates = None
+		self.oCurrency = output_currency
+		self.resultJSON = None
+
+	def verify_input_currency_name(self):
+		self.iCurrency = get_currency_name(self.iCurrency)
+
+	def get_exchange_rates(self):
+		self.verify_input_currency_name()
+		# Get rates from exchangeratesapi.io
+		currency_get = requests.get(f"https://api.exchangeratesapi.io/latest?base={self.iCurrency}")
+		if currency_get.status_code == 440:
+			# Failed connection
+			raise ConnectionError("Unable to retrieve exchange rates from server.")
+		elif currency_get.status_code == 400:
+			# Usually base currency not supported
+			raise ValueError(currency_get.text)
+		elif currency_get.status_code != 200:
+			raise BaseException(f"Unexpected error during obtaining exchange rates\nCode: {currency_get.status_code} - {currency_get.text}")
+		self.exchangeRates = json.loads(currency_get.text)["rates"]
+	
+	def verify_output_currency_name(self):
+		if self.oCurrency is not None:
+			self.oCurrency = get_currency_name(self.oCurrency)
+			# Check if program have exchange rate for output currency
+			if self.oCurrency not in self.exchangeRates.keys():
+				raise ValueError(f"Unsupported output currency: {self.oCurrency}")
+
+	def set_result_JSON_string(self):
+		try:
+			self.verify_output_currency_name()
+		except ValueError as e:
+			print(e)
+			return None
+		except BaseException as e:
+			print(f"Unexpected error during finding currency name:\n{e}")
+			return None
+
+		res_json_dict = {
+			"input": {
+				"amount": str(self.amount),
+				"currency": self.iCurrency
+			},
+			"output": {
+				#  <3 letter currency code>: <float>
+			}
+		}
+		# Fill resJsonDict with one or multiple exchange rates
+		if self.oCurrency is None:
+			for oCur in self.exchangeRates.keys():
+				res_json_dict["output"][oCur] = "%.2f" % (self.amount * float(self.exchangeRates[oCur]))
+		else:
+			res_json_dict["output"][self.oCurrency] = "%.2f" % (self.amount * float(self.exchangeRates[self.oCurrency]))
+		self.resultJSON = json.dumps(res_json_dict, indent=4)
+
+
 if __name__ == "__main__":
 	argsParser = ap.ArgumentParser()
 	try:
@@ -23,7 +83,6 @@ if __name__ == "__main__":
 	except ap.ArgumentError as e:
 		print(f"Problem in 'args_parser.add_parameters_needed' function\n{e}")
 		exit(2)
-
 
 	# Get dictionary of parameters and values
 	args = vars(argsParser.parse_args())
@@ -36,8 +95,25 @@ if __name__ == "__main__":
 		print("Argument --amount should be numeric (use . as decimal sign)")
 		exit(2)
 	iCurrency = args["input_currency"]
+	oCurrency = args["output_currency"]
+	
+	# initialize converter class instance
+	converter = CurrencyConverter(amount, iCurrency, oCurrency)
 	try:
-		iCurrency = get_currency_name(iCurrency)
+		converter.get_exchange_rates()
+	except ValueError as valE:
+		print(valE)
+		exit(2)
+	except ConnectionError as ce:
+		print("Problem with connection to database")
+		print(ce)
+		exit(-1)
+	except BaseException as e:
+		print(e)
+		exit(-1)
+
+	try:
+		converter.set_result_JSON_string()
 	except ValueError as valE:
 		print(valE)
 		exit(2)
@@ -45,53 +121,8 @@ if __name__ == "__main__":
 		print(e)
 		exit(-1)
 
-	oCurrency = args["output_currency"]
-
-	# Get rates from exchangeratesapi.io
-	curGet = requests.get(f"https://api.exchangeratesapi.io/latest?base={iCurrency}")
-	if curGet.status_code == 440:
-		print("Unable to retrieve exchange rates from server.")
-		exit(2)
-	elif curGet.status_code == 400:
-		print(curGet.text)
-		exit(2)
-	elif curGet.status_code != 200:
-		print("Unexpected error during obtaining exchange rates")
-		print(f"Code: {curGet.status_code} - {curGet.text}")
-
-	currencyRates = json.loads(curGet.text)["rates"]
-
-	if oCurrency is not None:
-		try:
-			oCurrency = get_currency_name(oCurrency)
-		except ValueError as e:
-			print(e)
-			exit(2)
-		except BaseException as e:
-			print(f"Unexpected error during finding currency name:\n{e}")
-			exit(-1)
-
-		if oCurrency not in currencyRates.keys():
-			print(f"Unsupported output currency: {oCurrency}")
-			exit(2)
-
-	resJsonDict = {
-		"input": {
-			"amount": amount.__str__(),
-			"currency": iCurrency
-		},
-		"output": {
-			#  <3 letter currency code>: <float>
-		}
-	}
-
-	# Fill resJsonDict with one or multiple exchange rates
-	if oCurrency is None:
-		for oCur in currencyRates.keys():
-			resJsonDict["output"][oCur] = "%.2f" % (amount * float(currencyRates[oCur]))
+	resJsonString = converter.resultJSON
+	if resJsonString:
+		print(resJsonString)
 	else:
-		resJsonDict["output"][oCurrency] = "%.2f" % (amount * float(currencyRates[oCurrency]))
-
-	resJsonString = json.dumps(resJsonDict, indent=4)
-
-	print(resJsonString)
+		exit(2)
