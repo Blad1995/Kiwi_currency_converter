@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, abort
 from flask_restful import Api, reqparse
 from currency_converter import CurrencyConverter
 
@@ -33,10 +33,10 @@ def get_conversion():
 	except BaseException as e:
 		return e
 	if converter.resultDict is None:
-		error_message = """Unable to get the result for following arguments:\n
+		error_message = f"""Unable to get the result for following arguments:\n
 						amount: {converter.amount}, input_currency: {converter.iCurrency}, output_currency: {converter.oCurrency}	
 					"""
-		return error_message, 400
+		abort(400, description=error_message)
 	return jsonify(converter.resultDict), 200
 
 
