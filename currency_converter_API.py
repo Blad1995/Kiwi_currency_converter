@@ -5,7 +5,7 @@ from currency_converter import CurrencyConverter
 # Initialize FLASK API
 app = Flask(__name__)
 api = Api(app)
-
+app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 
 @app.route("/currency_converter", methods=["GET"])
 def get_conversion():
